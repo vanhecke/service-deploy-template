@@ -35,6 +35,15 @@ source "${PROJECT_ROOT}/lib/modules/services.sh"
 source "${PROJECT_ROOT}/lib/modules/network.sh"
 source "${PROJECT_ROOT}/lib/modules/users.sh"
 source "${PROJECT_ROOT}/lib/modules/ssh.sh"
+source "${PROJECT_ROOT}/lib/modules/system.sh"
+source "${PROJECT_ROOT}/lib/modules/install.sh"
+source "${PROJECT_ROOT}/lib/modules/backup.sh"
+source "${PROJECT_ROOT}/lib/modules/version.sh"
+source "${PROJECT_ROOT}/lib/modules/systemd.sh"
+
+# Source application hooks (projects override app/hooks.sh)
+# shellcheck source=../app/hooks.sh
+source "${PROJECT_ROOT}/app/hooks.sh"
 
 # Define CLI options (single source of truth)
 options::define "flag|h|help|Show this help message"
@@ -66,6 +75,9 @@ Sets up:
   - Scoped sudoers rules
   - On-machine management CLI (<APP_NAME>ctl)
   - Firewall rules (optional)
+  - System hardening (swap, hostname, journald, unattended-upgrades)
+  - FHS directories (/opt, /etc, /var/lib, /var/backup)
+  - Application install via app/hooks.sh
 
 $(options::usage)
 
@@ -73,6 +85,10 @@ Environment Variables:
     APP_NAME         Application name
     APP_USER         Dedicated user to create
     APP_PORT         Application port (default: 8080)
+    APP_SERVICES     Space-separated systemd unit names (default: APP_NAME)
+    APP_DATA_DIR     Data directory (default: /var/lib/APP_NAME)
+    SWAP_SIZE        Swap file size, e.g. 2G (optional)
+    APP_HOSTNAME     Hostname to set (optional)
     SSH_GITHUB_USER  GitHub username for SSH key import (default: vanhecke)
     LOG_LEVEL        Log level: DEBUG|INFO|WARN|ERROR|FATAL (default: INFO)
 
@@ -203,6 +219,40 @@ main() {
         else
             firewall::enable
             firewall::allow_ports "${allowed_ports[@]}"
+        fi
+    fi
+
+    # 11. System hardening
+    if [[ -n "${SWAP_SIZE:-}" ]]; then
+        system::ensure_swap "$SWAP_SIZE"
+    fi
+    if [[ -n "${APP_HOSTNAME:-}" ]]; then
+        system::set_hostname "$APP_HOSTNAME"
+    fi
+    system::configure_journald
+    system::enable_unattended_upgrades
+
+    # 12. Create FHS directories
+    system::ensure_fhs_dirs "$app_name" "${app_user}:${app_user}"
+
+    # 13. Application install via hooks
+    logging::info "Running application hooks"
+    app_install
+    app_configure
+    app_post_install
+
+    # 14. Enable services
+    local -a app_services=()
+    if [[ -n "${APP_SERVICES:-}" ]]; then
+        IFS=' ' read -ra app_services <<<"${APP_SERVICES}"
+    else
+        app_services=("$app_name")
+    fi
+    if [[ "$DRY_RUN" == true ]]; then
+        logging::info "[DRY RUN] Would enable services: ${app_services[*]}"
+    else
+        if ((${#app_services[@]} > 0)); then
+            systemd::enable_all "${app_services[@]}"
         fi
     fi
 
