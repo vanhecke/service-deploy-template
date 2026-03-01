@@ -72,6 +72,37 @@ setup() {
     assert_output --partial "already active"
 }
 
+@test "system::ensure_swap creates swap and updates fstab" {
+    export DRY_RUN=false
+    export _FSTAB_FILE="$BATS_TEST_TMPDIR/fstab"
+    printf '%s\n' "# /etc/fstab" >"$_FSTAB_FILE"
+
+    # Mock swapon to report no active swap, then succeed
+    swapon() {
+        if [[ "${1:-}" == "--show" ]]; then
+            return 0
+        fi
+        return 0
+    }
+    export -f swapon
+
+    # Mock fallocate, mkswap, chmod
+    fallocate() { touch "$3"; }
+    export -f fallocate
+    mkswap() { :; }
+    export -f mkswap
+    chmod() { :; }
+    export -f chmod
+
+    run system::ensure_swap "2G"
+    assert_success
+    assert_output --partial "Swap enabled: 2G"
+
+    # Verify fstab was updated
+    run grep "/swapfile none swap sw 0 0" "$_FSTAB_FILE"
+    assert_success
+}
+
 # --- system::set_hostname ---
 
 @test "system::set_hostname fails without argument" {
@@ -115,6 +146,59 @@ setup() {
     assert_success
 }
 
+@test "system::set_hostname updates /etc/hosts with new entry" {
+    export DRY_RUN=false
+    export _HOSTS_FILE="$BATS_TEST_TMPDIR/hosts"
+    printf '%s\n' "127.0.0.1 localhost" >"$_HOSTS_FILE"
+
+    hostnamectl() { :; }
+    export -f hostnamectl
+
+    run system::set_hostname "myserver"
+    assert_success
+    assert_output --partial "Hostname set to myserver"
+
+    # Should have appended a 127.0.1.1 line
+    run grep "^127.0.1.1 myserver$" "$_HOSTS_FILE"
+    assert_success
+}
+
+@test "system::set_hostname replaces existing 127.0.1.1 entry" {
+    export DRY_RUN=false
+    export _HOSTS_FILE="$BATS_TEST_TMPDIR/hosts"
+    printf '%s\n' "127.0.0.1 localhost" "127.0.1.1 oldhost" >"$_HOSTS_FILE"
+
+    hostnamectl() { :; }
+    export -f hostnamectl
+
+    # Mock sed -i for macOS (BSD sed lacks \b and requires backup arg for -i)
+    sed() {
+        local args=()
+        for arg in "$@"; do
+            if [[ "$arg" == "-i" ]]; then
+                args+=("-i" "")
+            elif [[ "$arg" == *'\b'* ]]; then
+                # Replace \b with [[:space:]] boundary for BSD sed
+                args+=("${arg//\\b/[[:space:]]}")
+            else
+                args+=("$arg")
+            fi
+        done
+        /usr/bin/sed "${args[@]}"
+    }
+    export -f sed
+
+    run system::set_hostname "newhost"
+    assert_success
+
+    # Should have replaced the old entry
+    run grep "^127.0.1.1 newhost$" "$_HOSTS_FILE"
+    assert_success
+    # Old entry should be gone
+    run grep "oldhost" "$_HOSTS_FILE"
+    assert_failure
+}
+
 # --- system::configure_journald ---
 
 @test "system::configure_journald dry run logs message" {
@@ -126,58 +210,52 @@ setup() {
 
 @test "system::configure_journald updates existing config" {
     export DRY_RUN=false
-    local conf="$BATS_TEST_TMPDIR/journald.conf"
-    printf '%s\n' '[Journal]' '#SystemMaxUse=' '#MaxRetentionSec=' >"$conf"
+    export _JOURNALD_CONF="$BATS_TEST_TMPDIR/journald.conf"
+    printf '%s\n' '[Journal]' '#SystemMaxUse=' '#MaxRetentionSec=' >"$_JOURNALD_CONF"
 
-    # Override conf path by wrapping the function
     systemctl() { :; }
     export -f systemctl
 
-    # We need to test the actual logic, so we override the conf path
-    # by redefining the function with a custom conf path
-    _test_configure_journald() {
-        local conf="$1"
-        local desired_max_use="SystemMaxUse=500M"
-        local desired_retention="MaxRetentionSec=30day"
-        local changed=0
-
-        if grep -q "^SystemMaxUse=500M$" "$conf" 2>/dev/null; then
-            :
-        elif grep -q "^#*SystemMaxUse=" "$conf" 2>/dev/null; then
-            sed -i.bak "s/^#*SystemMaxUse=.*/${desired_max_use}/" "$conf"
-            changed=1
-        else
-            printf '%s\n' "$desired_max_use" >>"$conf"
-            changed=1
-        fi
-
-        if grep -q "^MaxRetentionSec=30day$" "$conf" 2>/dev/null; then
-            :
-        elif grep -q "^#*MaxRetentionSec=" "$conf" 2>/dev/null; then
-            sed -i.bak "s/^#*MaxRetentionSec=.*/${desired_retention}/" "$conf"
-            changed=1
-        else
-            printf '%s\n' "$desired_retention" >>"$conf"
-            changed=1
-        fi
-        printf '%d' "$changed"
+    # Make sed -i portable for macOS
+    sed() {
+        local args=()
+        for arg in "$@"; do
+            if [[ "$arg" == "-i" ]]; then
+                args+=("-i" "")
+            else
+                args+=("$arg")
+            fi
+        done
+        /usr/bin/sed "${args[@]}"
     }
+    export -f sed
 
-    run _test_configure_journald "$conf"
+    run system::configure_journald
     assert_success
-    assert_output "1"
-    grep -q "^SystemMaxUse=500M$" "$conf"
-    grep -q "^MaxRetentionSec=30day$" "$conf"
+    assert_output --partial "Configured journald"
+
+    grep -q "^SystemMaxUse=500M$" "$_JOURNALD_CONF"
+    grep -q "^MaxRetentionSec=30day$" "$_JOURNALD_CONF"
 }
 
 @test "system::configure_journald is idempotent" {
-    local conf="$BATS_TEST_TMPDIR/journald.conf"
-    printf '%s\n' '[Journal]' 'SystemMaxUse=500M' 'MaxRetentionSec=30day' >"$conf"
+    export DRY_RUN=false
+    export LOG_LEVEL=DEBUG
+    export _JOURNALD_CONF="$BATS_TEST_TMPDIR/journald.conf"
+    printf '%s\n' '[Journal]' 'SystemMaxUse=500M' 'MaxRetentionSec=30day' >"$_JOURNALD_CONF"
 
-    # The already-set values should not trigger a change
-    run grep -c "^SystemMaxUse=500M$" "$conf"
+    systemctl() { :; }
+    export -f systemctl
+
+    run system::configure_journald
+    assert_success
+    # Should not have restarted or reported changes
+    assert_output --partial "already configured"
+
+    # Values should still be correct
+    run grep -c "^SystemMaxUse=500M$" "$_JOURNALD_CONF"
     assert_output "1"
-    run grep -c "^MaxRetentionSec=30day$" "$conf"
+    run grep -c "^MaxRetentionSec=30day$" "$_JOURNALD_CONF"
     assert_output "1"
 }
 

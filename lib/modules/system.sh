@@ -37,6 +37,7 @@ system::ensure_swap() {
     fi
 
     local swapfile="/swapfile"
+    local fstab="${_FSTAB_FILE:-/etc/fstab}"
 
     if [[ -f "$swapfile" ]]; then
         logging::warn "Swap file exists but is not active, re-enabling"
@@ -48,7 +49,7 @@ system::ensure_swap() {
     fi
 
     swapon "$swapfile"
-    utils::ensure_line "/etc/fstab" "/swapfile none swap sw 0 0" "/swapfile"
+    utils::ensure_line "$fstab" "/swapfile none swap sw 0 0" "/swapfile"
     logging::info "Swap enabled: ${size}"
 }
 
@@ -71,7 +72,7 @@ system::set_hostname() {
     hostnamectl set-hostname "$name"
 
     # Update /etc/hosts: replace existing 127.0.1.1 line or add one
-    local hosts_file="/etc/hosts"
+    local hosts_file="${_HOSTS_FILE:-/etc/hosts}"
     local hosts_line="127.0.1.1 ${name}"
     if grep -q '^127\.0\.1\.1\b' "$hosts_file" 2>/dev/null; then
         sed -i "s/^127\.0\.1\.1\b.*/${hosts_line}/" "$hosts_file"
@@ -84,7 +85,7 @@ system::set_hostname() {
 
 # @description Configure journald with sensible defaults (SystemMaxUse, MaxRetentionSec). Idempotent.
 system::configure_journald() {
-    local conf="/etc/systemd/journald.conf"
+    local conf="${_JOURNALD_CONF:-/etc/systemd/journald.conf}"
     local desired_max_use="SystemMaxUse=500M"
     local desired_retention="MaxRetentionSec=30day"
     local changed=0
@@ -138,7 +139,6 @@ system::enable_unattended_upgrades() {
 
     packages::install unattended-upgrades
 
-    local conf="/etc/apt/apt.conf.d/50unattended-upgrades"
     local auto_conf="/etc/apt/apt.conf.d/20auto-upgrades"
 
     # Configure auto-upgrades
