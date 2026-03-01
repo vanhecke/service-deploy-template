@@ -6,3 +6,4 @@ tmp/
 *.swo
 *~
 .DS_Store
+.worktrees/
