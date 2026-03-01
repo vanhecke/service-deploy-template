@@ -4,6 +4,30 @@
 [[ -n "${_UTILS_SH_LOADED:-}" ]] && return 0
 readonly _UTILS_SH_LOADED=1
 
+_TEMP_FILES=()
+
+# @description Create a temporary file and register it for automatic cleanup.
+# @arg $1 string Variable name to receive the file path
+# @arg $2 string Optional file extension (default: tmp)
+utils::tempfile() {
+    local -n _tf_ref="$1"
+    local ext="${2:-tmp}"
+    local base
+    base=$(mktemp "/tmp/${APP_NAME:-script}.XXXXXX")
+    mv "$base" "${base}.${ext}"
+    _tf_ref="${base}.${ext}"
+    _TEMP_FILES+=("$_tf_ref")
+}
+
+# @description Remove all temporary files created by utils::tempfile.
+utils::cleanup_tempfiles() {
+    local f
+    for f in "${_TEMP_FILES[@]}"; do
+        [[ -f "$f" ]] && rm -f "$f"
+    done
+    _TEMP_FILES=()
+}
+
 # @description Create a timestamped backup of a file.
 utils::backup_file() {
     local file="$1"

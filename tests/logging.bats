@@ -50,3 +50,13 @@ setup() {
     assert_success
     assert_output --regexp '\[[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\]'
 }
+
+@test "logging::busy runs command and returns its exit code" {
+    run logging::busy "working" true
+    assert_success
+}
+
+@test "logging::busy propagates command failure" {
+    run logging::busy "failing" false
+    assert_failure
+}

@@ -68,5 +68,31 @@ logging::fatal() {
     exit 1
 }
 
+# @description Run a command with a spinner on stderr. Falls back to plain execution
+#   when stderr is not a terminal or NO_COLOR is set.
+# @arg $1 string Message to display next to the spinner
+# @arg $@ command Command and arguments to run
+logging::busy() {
+    local message="$1"
+    shift
+
+    # No spinner if not a terminal or colors disabled
+    if [[ -n "${NO_COLOR:-}" ]] || ! [[ -t 2 ]]; then
+        "$@"
+        return $?
+    fi
+
+    "$@" &
+    local pid=$!
+    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        printf '\r  %s %s' "${spin:i++%${#spin}:1}" "$message" >&2
+        sleep 0.1
+    done
+    printf '\r\033[2K' >&2
+    wait "$pid"
+}
+
 # Initialize colors on source
 logging::setup_colors

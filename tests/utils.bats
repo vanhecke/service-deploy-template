@@ -82,3 +82,25 @@ setup() {
     assert_failure
     assert_output --partial "not found"
 }
+
+@test "utils::tempfile creates a file" {
+    local myfile
+    utils::tempfile myfile "csv"
+    [[ -f "$myfile" ]]
+    rm -f "$myfile"
+}
+
+@test "utils::tempfile uses extension" {
+    local myfile
+    utils::tempfile myfile "json"
+    [[ "$myfile" == *.json ]]
+    rm -f "$myfile"
+}
+
+@test "utils::cleanup_tempfiles removes created files" {
+    local myfile
+    utils::tempfile myfile "tmp"
+    [[ -f "$myfile" ]]
+    utils::cleanup_tempfiles
+    [[ ! -f "$myfile" ]]
+}

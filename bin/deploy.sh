@@ -22,6 +22,7 @@ source "${PROJECT_ROOT}/lib/core/logging.sh"
 source "${PROJECT_ROOT}/lib/core/config.sh"
 source "${PROJECT_ROOT}/lib/core/checks.sh"
 source "${PROJECT_ROOT}/lib/core/utils.sh"
+source "${PROJECT_ROOT}/lib/core/options.sh"
 
 # Source module libraries
 source "${PROJECT_ROOT}/lib/modules/packages.sh"
@@ -31,12 +32,15 @@ source "${PROJECT_ROOT}/lib/modules/network.sh"
 source "${PROJECT_ROOT}/lib/modules/users.sh"
 source "${PROJECT_ROOT}/lib/modules/ssh.sh"
 
-# Globals
-DRY_RUN=false
-CONFIG_DIR="${PROJECT_ROOT}/etc"
+# Define CLI options (single source of truth)
+options::define "flag|h|help|Show this help message"
+options::define "flag|v|verbose|Enable debug logging"
+options::define "flag|n|dry-run|Show what would be done without making changes"
+options::define "option|c|config|Configuration directory|${PROJECT_ROOT}/etc"
 
 cleanup() {
     local exit_code=$?
+    utils::cleanup_tempfiles
     [[ -n "${SCRATCH_DIR:-}" ]] && rm -rf "$SCRATCH_DIR"
     [[ -n "${LOCK_FILE:-}" ]] && rm -f "$LOCK_FILE"
     exit "$exit_code"
@@ -57,11 +61,7 @@ Sets up:
   - On-machine management CLI (<APP_NAME>ctl)
   - Firewall rules (optional)
 
-Options:
-    -h, --help       Show this help message
-    -v, --verbose    Enable debug logging
-    -n, --dry-run    Show what would be done without making changes
-    -c, --config     Path to config directory (default: etc/)
+$(options::usage)
 
 Environment Variables:
     APP_NAME         Application name
@@ -76,34 +76,6 @@ Examples:
     sudo $(basename "$0") -n               # Dry run — show what would happen
     sudo $(basename "$0") -c /etc/myapp    # Custom config directory
 EOF
-}
-
-parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -h | --help)
-                usage
-                exit 0
-                ;;
-            -v | --verbose)
-                export LOG_LEVEL="DEBUG"
-                shift
-                ;;
-            -n | --dry-run)
-                DRY_RUN=true
-                shift
-                ;;
-            -c | --config)
-                CONFIG_DIR="$2"
-                shift 2
-                ;;
-            *)
-                logging::error "Unknown option: $1"
-                usage
-                exit 1
-                ;;
-        esac
-    done
 }
 
 # @description Copy the deploy project into the app user's home directory.
@@ -146,12 +118,16 @@ deploy::install_ctl() {
 }
 
 main() {
-    parse_args "$@"
+    options::parse "$@"
+
+    # Apply parsed options
+    [[ "${VERBOSE}" == true ]] && export LOG_LEVEL="DEBUG"
+    local config_dir="${CONFIG}"
 
     logging::info "Starting PROJECTNAME deployment"
 
     # Load configuration
-    config::load "$CONFIG_DIR"
+    config::load "$config_dir"
     config::require_vars APP_NAME APP_USER
 
     # shellcheck disable=SC2153 # Set by config::load
