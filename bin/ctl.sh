@@ -231,8 +231,8 @@ ctl::_systemctl_all() {
 }
 
 ctl::restart() { ctl::_systemctl_all restart "Restarted"; }
-ctl::start()   { ctl::_systemctl_all start   "Started"; }
-ctl::stop()    { ctl::_systemctl_all stop     "Stopped"; }
+ctl::start() { ctl::_systemctl_all start "Started"; }
+ctl::stop() { ctl::_systemctl_all stop "Stopped"; }
 
 ctl::upgrade() {
     logging::info "Starting upgrade"
