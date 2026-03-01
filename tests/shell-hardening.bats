@@ -54,3 +54,51 @@ SCRIPT
     run grep -qF $'IFS=$\'\\n\\t\'' "$PROJECT_ROOT/bin/ctl.sh"
     assert_success
 }
+
+# --- readonly metadata tests ---
+
+@test "deploy.sh makes SCRIPT_DIR readonly" {
+    run grep -q 'readonly.*SCRIPT_DIR' "$PROJECT_ROOT/bin/deploy.sh"
+    assert_success
+}
+
+@test "deploy.sh makes PROJECT_ROOT readonly" {
+    run grep -q 'readonly.*PROJECT_ROOT' "$PROJECT_ROOT/bin/deploy.sh"
+    assert_success
+}
+
+@test "ctl.sh makes SCRIPT_DIR readonly" {
+    run grep -q 'readonly.*SCRIPT_DIR' "$PROJECT_ROOT/bin/ctl.sh"
+    assert_success
+}
+
+@test "ctl.sh makes APP_HOME readonly" {
+    run grep -q 'readonly.*APP_HOME' "$PROJECT_ROOT/bin/ctl.sh"
+    assert_success
+}
+
+# --- source-guard tests ---
+
+@test "deploy.sh has source guard" {
+    run grep -q 'return 0' "$PROJECT_ROOT/bin/deploy.sh"
+    assert_success
+}
+
+@test "deploy.sh does not execute main when sourced" {
+    local wrapper="$BATS_TEST_TMPDIR/source-test.sh"
+    cat >"$wrapper" <<SCRIPT
+#!/usr/bin/env bash
+set +euo pipefail
+source "$PROJECT_ROOT/bin/deploy.sh" 2>/dev/null
+echo "sourced ok"
+SCRIPT
+    chmod +x "$wrapper"
+    run "$wrapper"
+    assert_success
+    assert_output "sourced ok"
+}
+
+@test "ctl.sh has source guard" {
+    run grep -q 'return 0' "$PROJECT_ROOT/bin/ctl.sh"
+    assert_success
+}

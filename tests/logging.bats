@@ -60,3 +60,60 @@ setup() {
     run logging::busy "failing" false
     assert_failure
 }
+
+# --- cron mode tests ---
+
+@test "logging::cron_init is defined" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/logging.sh'; declare -f logging::cron_init"
+    assert_success
+}
+
+@test "logging::cron_init suppresses output" {
+    local script="$BATS_TEST_TMPDIR/cron-test.sh"
+    cat >"$script" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+source "${1}/lib/core/logging.sh"
+logging::cron_init
+echo "this should be captured"
+logging::info "also captured"
+SCRIPT
+    chmod +x "$script"
+    run "$script" "$PROJECT_ROOT"
+    assert_success
+    refute_output --partial "this should be captured"
+    refute_output --partial "also captured"
+}
+
+@test "logging::cron_cleanup dumps output on error" {
+    local script="$BATS_TEST_TMPDIR/cron-err-test.sh"
+    cat >"$script" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+source "${1}/lib/core/logging.sh"
+trap 'logging::cron_cleanup' EXIT
+logging::cron_init
+echo "diagnostic info"
+false
+SCRIPT
+    chmod +x "$script"
+    run "$script" "$PROJECT_ROOT"
+    assert_failure
+    assert_output --partial "diagnostic info"
+}
+
+@test "logging::cron_cleanup is silent on success" {
+    local script="$BATS_TEST_TMPDIR/cron-ok-test.sh"
+    cat >"$script" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+source "${1}/lib/core/logging.sh"
+trap 'logging::cron_cleanup' EXIT
+logging::cron_init
+echo "should stay hidden"
+SCRIPT
+    chmod +x "$script"
+    run "$script" "$PROJECT_ROOT"
+    assert_success
+    refute_output --partial "should stay hidden"
+}

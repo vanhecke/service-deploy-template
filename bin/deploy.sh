@@ -19,6 +19,7 @@ trap 'printf "Error on line %d (exit %d)\n" "$LINENO" "$?" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+readonly SCRIPT_DIR PROJECT_ROOT
 
 # Source core libraries
 source "${PROJECT_ROOT}/lib/core/logging.sh"
@@ -40,9 +41,11 @@ options::define "flag|h|help|Show this help message"
 options::define "flag|v|verbose|Enable debug logging"
 options::define "flag|n|dry-run|Show what would be done without making changes"
 options::define "option|c|config|Configuration directory|${PROJECT_ROOT}/etc"
+options::define "flag|C|cron|Run silently unless an error occurs"
 
 cleanup() {
     local exit_code=$?
+    logging::cron_cleanup
     utils::cleanup_tempfiles
     [[ -n "${SCRATCH_DIR:-}" ]] && rm -rf "$SCRATCH_DIR"
     [[ -n "${LOCK_FILE:-}" ]] && rm -f "$LOCK_FILE"
@@ -125,6 +128,7 @@ main() {
 
     # Apply parsed options
     [[ "${VERBOSE}" == true ]] && export LOG_LEVEL="DEBUG"
+    [[ "${CRON}" == true ]] && logging::cron_init
     local config_dir="${CONFIG}"
 
     logging::info "Starting PROJECTNAME deployment"
@@ -202,4 +206,6 @@ main() {
     fi
 }
 
-main "$@"
+if ! (return 0 2>/dev/null); then
+    main "$@"
+fi

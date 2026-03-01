@@ -87,3 +87,16 @@ checks::require_bash_version() {
 checks::is_interactive() {
     [[ -t 0 ]]
 }
+
+# @description Run a command as root, using sudo if not already root.
+checks::run_as_root() {
+    if [[ $# -eq 0 ]]; then
+        printf 'checks::run_as_root: missing command\n' >&2
+        return 1
+    fi
+    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+        "$@"
+    else
+        sudo -H -- "$@"
+    fi
+}

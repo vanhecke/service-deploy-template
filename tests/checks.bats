@@ -83,3 +83,37 @@ EOF
     run bash -c "source '$PROJECT_ROOT/lib/core/checks.sh'; checks::is_interactive" <<<""
     assert_failure
 }
+
+@test "checks::run_as_root is defined" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/checks.sh'; declare -f checks::run_as_root"
+    assert_success
+}
+
+@test "checks::run_as_root executes the given command" {
+    # We're not root in tests, so run_as_root will try sudo.
+    # Test with a mock sudo that just executes the command.
+    local mock_dir="$BATS_TEST_TMPDIR/mock-bin"
+    mkdir -p "$mock_dir"
+    local bash_path
+    bash_path="$(command -v bash)"
+    cat >"$mock_dir/sudo" <<MOCK
+#!${bash_path}
+# Strip sudo flags (-H --)
+while [[ "\${1:-}" == -* ]]; do shift; done
+exec "\$@"
+MOCK
+    chmod +x "$mock_dir/sudo"
+
+    run bash -c "
+        export PATH='$mock_dir':\$PATH
+        source '$PROJECT_ROOT/lib/core/checks.sh'
+        checks::run_as_root echo 'hello elevated'
+    "
+    assert_success
+    assert_output --partial "hello elevated"
+}
+
+@test "checks::run_as_root fails without arguments" {
+    run checks::run_as_root
+    assert_failure
+}

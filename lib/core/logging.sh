@@ -94,5 +94,26 @@ logging::busy() {
     wait "$pid"
 }
 
+# @description Enable cron mode: capture all stdout/stderr to a temp file.
+#   Call logging::cron_cleanup in an EXIT trap to dump output only on error.
+logging::cron_init() {
+    _CRON_OUTPUT="$(mktemp)"
+    exec 3>&1 4>&2 1>"$_CRON_OUTPUT" 2>&1
+}
+
+# @description Cron mode cleanup. Dumps captured output on non-zero exit, deletes temp file.
+logging::cron_cleanup() {
+    local exit_code=$?
+    if [[ -n "${_CRON_OUTPUT:-}" ]] && [[ -f "$_CRON_OUTPUT" ]]; then
+        if [[ $exit_code -ne 0 ]]; then
+            # Restore original FDs and dump captured output
+            exec 1>&3 2>&4
+            printf '=== Cron job failed (exit %d) ===\n' "$exit_code" >&2
+            cat "$_CRON_OUTPUT" >&2
+        fi
+        rm -f "$_CRON_OUTPUT"
+    fi
+}
+
 # Initialize colors on source
 logging::setup_colors

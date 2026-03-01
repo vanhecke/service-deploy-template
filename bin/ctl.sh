@@ -13,12 +13,15 @@ trap 'printf "Error on line %d (exit %d)\n" "$LINENO" "$?" >&2' ERR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_NAME="$(basename "$APP_HOME")"
+readonly SCRIPT_DIR APP_HOME APP_NAME
 
 # Source core libraries from deployed copy
 # shellcheck source=../lib/core/logging.sh
 source "${APP_HOME}/deploy/lib/core/logging.sh"
 # shellcheck source=../lib/core/config.sh
 source "${APP_HOME}/deploy/lib/core/config.sh"
+# shellcheck source=../lib/core/checks.sh
+source "${APP_HOME}/deploy/lib/core/checks.sh"
 
 # Load config if present
 if [[ -d "${APP_HOME}/.config/${APP_NAME}" ]]; then
@@ -75,8 +78,8 @@ ctl::health() {
 
 ctl::update() {
     logging::info "Running system update"
-    sudo apt-get update -qq
-    sudo apt-get upgrade -y -qq
+    checks::run_as_root apt-get update -qq
+    checks::run_as_root apt-get upgrade -y -qq
     logging::info "Update complete"
 }
 
@@ -85,7 +88,7 @@ ctl::status() {
 }
 
 ctl::restart() {
-    sudo systemctl restart "${APP_NAME}"
+    checks::run_as_root systemctl restart "${APP_NAME}"
     logging::info "Restarted ${APP_NAME}"
 }
 
@@ -109,16 +112,18 @@ Commands:
 EOF
 }
 
-case "${1:-help}" in
-    health) ctl::health ;;
-    update) ctl::update ;;
-    status) ctl::status ;;
-    restart) ctl::restart ;;
-    logs) ctl::logs "$@" ;;
-    help | --help | -h) ctl::usage ;;
-    *)
-        logging::error "Unknown command: $1"
-        ctl::usage
-        exit 1
-        ;;
-esac
+if ! (return 0 2>/dev/null); then
+    case "${1:-help}" in
+        health) ctl::health ;;
+        update) ctl::update ;;
+        status) ctl::status ;;
+        restart) ctl::restart ;;
+        logs) ctl::logs "$@" ;;
+        help | --help | -h) ctl::usage ;;
+        *)
+            logging::error "Unknown command: $1"
+            ctl::usage
+            exit 1
+            ;;
+    esac
+fi
