@@ -100,27 +100,23 @@ system::configure_journald() {
         return 1
     fi
 
-    # Update or add SystemMaxUse
-    if grep -q "^SystemMaxUse=500M$" "$conf" 2>/dev/null; then
-        : # already set
-    elif grep -q "^#*SystemMaxUse=" "$conf" 2>/dev/null; then
-        sed -i "s/^#*SystemMaxUse=.*/${desired_max_use}/" "$conf"
-        changed=1
-    else
-        printf '%s\n' "$desired_max_use" >>"$conf"
-        changed=1
-    fi
+    # Update or add a journald setting idempotently.
+    # Returns 0 if a change was made, 1 if already set.
+    _update_journald_setting() {
+        local f="$1" key="$2" value="$3"
+        local line="${key}=${value}"
+        if grep -q "^${line}$" "$f" 2>/dev/null; then
+            return 1 # already set
+        elif grep -q "^#*${key}=" "$f" 2>/dev/null; then
+            sed -i "s/^#*${key}=.*/${line}/" "$f"
+        else
+            printf '%s\n' "$line" >>"$f"
+        fi
+    }
 
-    # Update or add MaxRetentionSec
-    if grep -q "^MaxRetentionSec=30day$" "$conf" 2>/dev/null; then
-        : # already set
-    elif grep -q "^#*MaxRetentionSec=" "$conf" 2>/dev/null; then
-        sed -i "s/^#*MaxRetentionSec=.*/${desired_retention}/" "$conf"
-        changed=1
-    else
-        printf '%s\n' "$desired_retention" >>"$conf"
-        changed=1
-    fi
+    _update_journald_setting "$conf" "SystemMaxUse" "500M" && changed=1
+    _update_journald_setting "$conf" "MaxRetentionSec" "30day" && changed=1
+    unset -f _update_journald_setting
 
     if ((changed)); then
         systemctl restart systemd-journald

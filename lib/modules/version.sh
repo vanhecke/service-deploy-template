@@ -27,7 +27,7 @@ version::get() {
 
     if [[ -f "$state_file" ]]; then
         local ver
-        ver="$(head -n 1 "$state_file")"
+        read -r ver < "$state_file"
         printf '%s\n' "${ver:-unknown}"
     else
         printf '%s\n' "unknown"

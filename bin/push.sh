@@ -64,7 +64,7 @@ push::get_app_name() {
 
     local app_name
     # shellcheck disable=SC2034
-    app_name="$(grep -E '^APP_NAME=' "$env_file" | head -1 | cut -d= -f2-)"
+    app_name="$(grep -m1 -E '^APP_NAME=' "$env_file" | cut -d= -f2-)"
     if [[ -z "$app_name" ]]; then
         logging::error "APP_NAME not found in ${env_file}"
         return 1

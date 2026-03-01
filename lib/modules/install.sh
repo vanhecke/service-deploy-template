@@ -25,7 +25,7 @@ install::download() {
 
     local dest_dir
     dest_dir="$(dirname "$dest")"
-    mkdir -p "$dest_dir"
+    utils::ensure_dir "$dest_dir"
 
     if ! curl -fSL --retry 3 --retry-delay 2 -o "$dest" "$url"; then
         logging::error "Failed to download ${url}"
@@ -78,7 +78,7 @@ install::extract() {
         return 1
     fi
 
-    mkdir -p "$dest"
+    utils::ensure_dir "$dest"
 
     logging::info "Extracting ${archive} -> ${dest}"
 

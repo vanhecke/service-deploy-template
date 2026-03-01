@@ -145,8 +145,9 @@ ctl::health() {
     # -- Memory usage --
     local mem_pct=0
     local mem_avail mem_total
-    mem_avail="$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null)" || true
-    mem_total="$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null)" || true
+    read -r mem_avail mem_total < <(
+        awk '/MemAvailable/ {a=$2} /MemTotal/ {t=$2} END {print a, t}' /proc/meminfo 2>/dev/null
+    ) || true
     if [[ -n "${mem_avail:-}" ]] && [[ -n "${mem_total:-}" ]] && ((mem_total > 0)); then
         mem_pct=$(((mem_total - mem_avail) * 100 / mem_total))
         if ((mem_pct > 90)); then
@@ -218,35 +219,20 @@ ctl::status() {
     systemd::status_all "${svcs[@]}"
 }
 
-ctl::restart() {
+ctl::_systemctl_all() {
+    local action="$1" verb="$2"
     local -a svcs
     mapfile -t svcs < <(ctl::_services)
     local svc
     for svc in "${svcs[@]}"; do
-        checks::run_as_root systemctl restart "$svc"
-        logging::info "Restarted ${svc}"
+        checks::run_as_root systemctl "$action" "$svc"
+        logging::info "${verb} ${svc}"
     done
 }
 
-ctl::start() {
-    local -a svcs
-    mapfile -t svcs < <(ctl::_services)
-    local svc
-    for svc in "${svcs[@]}"; do
-        checks::run_as_root systemctl start "$svc"
-        logging::info "Started ${svc}"
-    done
-}
-
-ctl::stop() {
-    local -a svcs
-    mapfile -t svcs < <(ctl::_services)
-    local svc
-    for svc in "${svcs[@]}"; do
-        checks::run_as_root systemctl stop "$svc"
-        logging::info "Stopped ${svc}"
-    done
-}
+ctl::restart() { ctl::_systemctl_all restart "Restarted"; }
+ctl::start()   { ctl::_systemctl_all start   "Started"; }
+ctl::stop()    { ctl::_systemctl_all stop     "Stopped"; }
 
 ctl::upgrade() {
     logging::info "Starting upgrade"

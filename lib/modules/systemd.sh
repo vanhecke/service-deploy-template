@@ -25,9 +25,7 @@ systemd::install_unit() {
     utils::ensure_dir "$unit_dir"
 
     if [[ -f "$unit_file" ]]; then
-        local existing
-        existing="$(cat "$unit_file")"
-        if [[ "$existing" == "$content" ]]; then
+        if printf '%s\n' "$content" | cmp -s "$unit_file" -; then
             logging::info "Unit ${name}.service is already up to date"
             return 0
         fi
