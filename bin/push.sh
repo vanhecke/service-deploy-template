@@ -179,12 +179,12 @@ main() {
     # Step 2: SSH to the host and run deploy.sh
     logging::info "Running deploy.sh on ${target}"
     # shellcheck disable=SC2029
-    ssh "${ssh_opts[@]}" "$target" "cd ${remote_dir} && sudo ./bin/deploy.sh"
+    ssh "${ssh_opts[@]}" "$target" "cd '${remote_dir}' && sudo ./bin/deploy.sh"
 
     # Step 3: Clean up the temp directory on success
     logging::info "Cleaning up ${remote_dir} on ${target}"
     # shellcheck disable=SC2029
-    ssh "${ssh_opts[@]}" "$target" "rm -rf ${remote_dir}"
+    ssh "${ssh_opts[@]}" "$target" "rm -rf '${remote_dir}'"
 
     logging::info "Deployment to ${target} complete"
 }

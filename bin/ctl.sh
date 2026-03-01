@@ -52,16 +52,18 @@ fi
 # otherwise falls back to APP_NAME.
 ctl::_services() {
     local svc_list="${APP_SERVICES:-${APP_NAME}}"
-    # shellcheck disable=SC2086
-    printf '%s\n' $svc_list
+    local -a svcs
+    IFS=' ' read -ra svcs <<<"$svc_list"
+    printf '%s\n' "${svcs[@]}"
 }
 
 # @description Build the list of ports to check. Supports space-separated APP_PORT.
 ctl::_ports() {
     local port_list="${APP_PORT:-}"
     [[ -z "$port_list" ]] && return 0
-    # shellcheck disable=SC2086
-    printf '%s\n' $port_list
+    local -a ports
+    IFS=' ' read -ra ports <<<"$port_list"
+    printf '%s\n' "${ports[@]}"
 }
 
 # @description Escape a string for safe inclusion in JSON values.
@@ -307,7 +309,7 @@ ctl::uninstall() {
 }
 
 ctl::logs() {
-    local lines="${2:-50}"
+    local lines="${1:-50}"
     local -a svcs
     mapfile -t svcs < <(ctl::_services)
     local svc
@@ -352,7 +354,10 @@ if ! (return 0 2>/dev/null); then
             ;;
         version) ctl::version ;;
         uninstall) ctl::uninstall ;;
-        logs) ctl::logs "$@" ;;
+        logs)
+            shift
+            ctl::logs "${1:-}"
+            ;;
         help | --help | -h) ctl::usage ;;
         *)
             logging::error "Unknown command: $1"
