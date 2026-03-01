@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # PROJECTNAME — REPO_DESCRIPTION
 #
-# Usage: ./bin/deploy.sh [options]
+# Usage: sudo ./bin/deploy.sh [options]
+#
+# Idempotent deployment script. Run on the destination box as root.
+# Sets up a dedicated app user, imports SSH keys, installs the management CLI.
 #
 # Options:
 #   -h, --help       Show this help message
@@ -25,6 +28,8 @@ source "${PROJECT_ROOT}/lib/modules/packages.sh"
 source "${PROJECT_ROOT}/lib/modules/firewall.sh"
 source "${PROJECT_ROOT}/lib/modules/services.sh"
 source "${PROJECT_ROOT}/lib/modules/network.sh"
+source "${PROJECT_ROOT}/lib/modules/users.sh"
+source "${PROJECT_ROOT}/lib/modules/ssh.sh"
 
 # Globals
 DRY_RUN=false
@@ -40,10 +45,17 @@ trap cleanup EXIT
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [options]
+Usage: sudo $(basename "$0") [options]
 
-PROJECTNAME deploy script.
+PROJECTNAME deploy script — run on the destination box.
 REPO_DESCRIPTION
+
+Sets up:
+  - Dedicated app user with SSH access
+  - GitHub public key import
+  - Scoped sudoers rules
+  - On-machine management CLI (<APP_NAME>ctl)
+  - Firewall rules (optional)
 
 Options:
     -h, --help       Show this help message
@@ -53,15 +65,16 @@ Options:
 
 Environment Variables:
     APP_NAME         Application name
+    APP_USER         Dedicated user to create
     APP_PORT         Application port (default: 8080)
+    SSH_GITHUB_USER  GitHub username for SSH key import (default: vanhecke)
     LOG_LEVEL        Log level: DEBUG|INFO|WARN|ERROR|FATAL (default: INFO)
-    LOG_FILE         Path to log file (optional, logs to file when set)
 
 Examples:
-    $(basename "$0")                  # Deploy with default config
-    $(basename "$0") -v               # Deploy with debug logging
-    $(basename "$0") -n               # Dry run
-    $(basename "$0") -c /etc/myapp    # Custom config directory
+    sudo $(basename "$0")                  # Deploy with default config
+    sudo $(basename "$0") -v               # Deploy with debug logging
+    sudo $(basename "$0") -n               # Dry run — show what would happen
+    sudo $(basename "$0") -c /etc/myapp    # Custom config directory
 EOF
 }
 
@@ -93,6 +106,45 @@ parse_args() {
     done
 }
 
+# @description Copy the deploy project into the app user's home directory.
+deploy::install_project() {
+    local app_user="$1"
+    local home_dir
+    home_dir="$(eval echo "~${app_user}")"
+    local deploy_dir="${home_dir}/deploy"
+
+    if [[ "${DRY_RUN}" == true ]]; then
+        logging::info "[DRY RUN] Would copy project to ${deploy_dir}"
+        return 0
+    fi
+    utils::ensure_dir "$deploy_dir" "${app_user}:${app_user}"
+    rsync -a --delete --exclude='.git' --exclude='.env' "${PROJECT_ROOT}/" "${deploy_dir}/"
+    chown -R "${app_user}:${app_user}" "$deploy_dir"
+    logging::info "Installed deploy project to ${deploy_dir}"
+}
+
+# @description Install the management CLI and create a symlink in /usr/local/bin.
+deploy::install_ctl() {
+    local app_user="$1"
+    local app_name="$2"
+    local home_dir
+    home_dir="$(eval echo "~${app_user}")"
+    local bin_dir="${home_dir}/bin"
+    local ctl_name="${app_name}ctl"
+    local ctl_path="${bin_dir}/${ctl_name}"
+
+    if [[ "${DRY_RUN}" == true ]]; then
+        logging::info "[DRY RUN] Would install ${ctl_name} to ${ctl_path}"
+        return 0
+    fi
+    utils::ensure_dir "$bin_dir" "${app_user}:${app_user}"
+    cp "${PROJECT_ROOT}/bin/ctl.sh" "$ctl_path"
+    chmod 755 "$ctl_path"
+    chown "${app_user}:${app_user}" "$ctl_path"
+    utils::ensure_symlink "$ctl_path" "/usr/local/bin/${ctl_name}"
+    logging::info "Installed ${ctl_name} → /usr/local/bin/${ctl_name}"
+}
+
 main() {
     parse_args "$@"
 
@@ -100,7 +152,13 @@ main() {
 
     # Load configuration
     config::load "$CONFIG_DIR"
-    config::require_vars APP_NAME
+    config::require_vars APP_NAME APP_USER
+
+    # shellcheck disable=SC2153 # Set by config::load
+    local app_name="${APP_NAME}"
+    # shellcheck disable=SC2153 # Set by config::load
+    local app_user="${APP_USER}"
+    local github_user="${SSH_GITHUB_USER:-vanhecke}"
 
     # Preflight checks
     checks::require_bash_version 4
@@ -109,22 +167,56 @@ main() {
     logging::info "Detected OS: ${OS_ID} ${OS_VERSION_ID} (${OS_ARCH})"
 
     if [[ "$DRY_RUN" == true ]]; then
-        logging::info "[DRY RUN] Would deploy ${APP_NAME}"
-        exit 0
+        logging::info "[DRY RUN] Showing what would be done"
     fi
 
-    # --- Add your deployment steps below ---
-    #
-    # Example:
-    #   checks::require_root
-    #   packages::install curl wget unzip
-    #   firewall::enable
-    #   firewall::allow_ports 22 80 443 "${APP_PORT:-8080}"
-    #   services::enable_and_start your-service
-    #
-    # --- End deployment steps ---
+    # 1. Require root
+    checks::require_root
+
+    # 2. Install base packages
+    if [[ "$DRY_RUN" == true ]]; then
+        logging::info "[DRY RUN] Would install packages: curl openssh-server rsync ${EXTRA_PACKAGES:-}"
+    else
+        # shellcheck disable=SC2086
+        packages::install curl openssh-server rsync ${EXTRA_PACKAGES:-}
+    fi
+
+    # 3. Create dedicated user
+    users::ensure_user "$app_user"
+
+    # 4. Lock password login
+    users::lock_password "$app_user"
+
+    # 5. Set up SSH directory
+    ssh::ensure_authorized_keys "$app_user"
+
+    # 6. Import GitHub SSH keys
+    ssh::import_github_keys "$github_user" "$app_user"
+
+    # 7. Install scoped sudoers rules
+    users::ensure_sudoers "$app_user" "$app_name"
+
+    # 8. Copy deploy project to user home
+    deploy::install_project "$app_user"
+
+    # 9. Install management CLI
+    deploy::install_ctl "$app_user" "$app_name"
+
+    # 10. Firewall (if enabled)
+    if [[ "${FIREWALL_ENABLED:-false}" == true ]]; then
+        if [[ "$DRY_RUN" == true ]]; then
+            logging::info "[DRY RUN] Would enable firewall and allow ports: ${ALLOWED_PORTS:-22}"
+        else
+            firewall::enable
+            # shellcheck disable=SC2086
+            firewall::allow_ports ${ALLOWED_PORTS:-22}
+        fi
+    fi
 
     logging::info "PROJECTNAME deployment complete"
+    if [[ "$DRY_RUN" != true ]]; then
+        logging::info "Management CLI available: ${app_name}ctl help"
+    fi
 }
 
 main "$@"
