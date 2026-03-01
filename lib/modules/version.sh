@@ -8,9 +8,9 @@
 [[ -n "${_VERSION_SH_LOADED:-}" ]] && return 0
 readonly _VERSION_SH_LOADED=1
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../core/logging.sh"
-source "${SCRIPT_DIR}/../core/utils.sh"
+_VERSION_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_VERSION_SH_DIR}/../core/logging.sh"
+source "${_VERSION_SH_DIR}/../core/utils.sh"
 
 # @description Print the path to the version state file.
 # Default: /var/lib/${APP_NAME}/version. Overridable via _VERSION_FILE env var.

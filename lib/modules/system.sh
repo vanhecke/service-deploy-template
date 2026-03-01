@@ -9,10 +9,10 @@
 [[ -n "${_SYSTEM_SH_LOADED:-}" ]] && return 0
 readonly _SYSTEM_SH_LOADED=1
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../core/logging.sh"
-source "${SCRIPT_DIR}/../core/utils.sh"
-source "${SCRIPT_DIR}/packages.sh"
+_SYSTEM_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_SYSTEM_SH_DIR}/../core/logging.sh"
+source "${_SYSTEM_SH_DIR}/../core/utils.sh"
+source "${_SYSTEM_SH_DIR}/packages.sh"
 
 # @description Create a swap file if none is currently active.
 # @arg $1 string Swap size (e.g., 2G, 512M)
