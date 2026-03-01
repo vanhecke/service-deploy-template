@@ -73,3 +73,13 @@ EOF
     run checks::require_bash_version 999
     assert_failure
 }
+
+@test "checks::is_interactive is defined" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/checks.sh'; declare -f checks::is_interactive"
+    assert_success
+}
+
+@test "checks::is_interactive returns false when piped" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/checks.sh'; checks::is_interactive" <<<""
+    assert_failure
+}

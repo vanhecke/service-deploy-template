@@ -13,6 +13,9 @@
 #   -c, --config     Path to config directory (default: etc/)
 
 set -euo pipefail
+set -o errtrace
+IFS=$'\n\t'
+trap 'printf "Error on line %d (exit %d)\n" "$LINENO" "$?" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -150,11 +153,14 @@ main() {
     checks::require_root
 
     # 2. Install base packages
+    local -a extra_pkgs=()
+    if [[ -n "${EXTRA_PACKAGES:-}" ]]; then
+        IFS=' ' read -ra extra_pkgs <<<"${EXTRA_PACKAGES}"
+    fi
     if [[ "$DRY_RUN" == true ]]; then
-        logging::info "[DRY RUN] Would install packages: curl openssh-server rsync ${EXTRA_PACKAGES:-}"
+        logging::info "[DRY RUN] Would install packages: curl openssh-server rsync ${extra_pkgs[*]:-}"
     else
-        # shellcheck disable=SC2086
-        packages::install curl openssh-server rsync ${EXTRA_PACKAGES:-}
+        packages::install curl openssh-server rsync "${extra_pkgs[@]}"
     fi
 
     # 3. Create dedicated user
@@ -180,12 +186,13 @@ main() {
 
     # 10. Firewall (if enabled)
     if [[ "${FIREWALL_ENABLED:-false}" == true ]]; then
+        local -a allowed_ports=()
+        IFS=' ' read -ra allowed_ports <<<"${ALLOWED_PORTS:-22}"
         if [[ "$DRY_RUN" == true ]]; then
-            logging::info "[DRY RUN] Would enable firewall and allow ports: ${ALLOWED_PORTS:-22}"
+            logging::info "[DRY RUN] Would enable firewall and allow ports: ${allowed_ports[*]}"
         else
             firewall::enable
-            # shellcheck disable=SC2086
-            firewall::allow_ports ${ALLOWED_PORTS:-22}
+            firewall::allow_ports "${allowed_ports[@]}"
         fi
     fi
 

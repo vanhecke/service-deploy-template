@@ -82,3 +82,8 @@ checks::require_bash_version() {
         return 1
     fi
 }
+
+# @description Check if stdin is connected to a terminal (interactive).
+checks::is_interactive() {
+    [[ -t 0 ]]
+}
