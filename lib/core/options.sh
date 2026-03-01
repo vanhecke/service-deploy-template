@@ -69,8 +69,23 @@ options::usage() {
 # @arg $@ Command-line arguments
 options::parse() {
     _options::init_defaults
+    ARGS=()
 
     while [[ $# -gt 0 ]]; do
+        # Stop processing options after --
+        if [[ "$1" == "--" ]]; then
+            shift
+            ARGS+=("$@")
+            break
+        fi
+
+        # Collect positional arguments (non-option args)
+        if [[ "$1" != -* ]]; then
+            ARGS+=("$1")
+            shift
+            continue
+        fi
+
         local matched=false
         local def type short long default varname
         for def in "${_OPTIONS_DEFS[@]}"; do
