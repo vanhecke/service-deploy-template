@@ -2,7 +2,7 @@ name: Template Bootstrap
 on: [push]
 jobs:
   setup:
-    if: github.repository != 'REPO_OWNER/PROJECTNAME'
+    if: github.repository != 'vanhecke/service-deploy-template'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -20,9 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          curl -sSL "https://github.com/mvdan/sh/releases/latest/download/shfmt_linux_amd64" \
-            -o /usr/local/bin/shfmt && chmod +x /usr/local/bin/shfmt
+      - uses: mfinelli/setup-shfmt@v2
       - run: shfmt -d -i 4 -ci .
 
   test:
