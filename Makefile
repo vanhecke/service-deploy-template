@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-SCRIPTS := $(shell find lib bin -type f -name '*.sh' 2>/dev/null)
+SCRIPTS := $(shell find lib bin app -type f -name '*.sh' 2>/dev/null)
 
 ##@ Development
 .PHONY: lint
@@ -22,6 +22,11 @@ test: ## Run bats-core tests
 
 .PHONY: check
 check: lint format-check test ## Run all checks (CI target)
+
+##@ Deployment
+.PHONY: deploy
+deploy: ## Deploy to remote host (make deploy HOST=user@ip)
+	@bin/push.sh $(if $(HOST),$(HOST),$(error Set HOST=user@ip))
 
 ##@ Helpers
 .PHONY: help
