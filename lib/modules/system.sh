@@ -74,8 +74,8 @@ system::set_hostname() {
     # Update /etc/hosts: replace existing 127.0.1.1 line or add one
     local hosts_file="${_HOSTS_FILE:-/etc/hosts}"
     local hosts_line="127.0.1.1 ${name}"
-    if grep -q '^127\.0\.1\.1\b' "$hosts_file" 2>/dev/null; then
-        sed -i "s/^127\.0\.1\.1\b.*/${hosts_line}/" "$hosts_file"
+    if grep -q '^127\.0\.1\.1[[:space:]]' "$hosts_file" 2>/dev/null; then
+        sed "s/^127\.0\.1\.1[[:space:]].*/${hosts_line}/" "$hosts_file" >"${hosts_file}.tmp" && mv "${hosts_file}.tmp" "$hosts_file"
     else
         printf '%s\n' "$hosts_line" >>"$hosts_file"
     fi
@@ -108,7 +108,7 @@ system::configure_journald() {
         if grep -q "^${line}$" "$f" 2>/dev/null; then
             return 1 # already set
         elif grep -q "^#*${key}=" "$f" 2>/dev/null; then
-            sed -i "s/^#*${key}=.*/${line}/" "$f"
+            sed "s/^#*${key}=.*/${line}/" "$f" >"${f}.tmp" && mv "${f}.tmp" "$f"
         else
             printf '%s\n' "$line" >>"$f"
         fi

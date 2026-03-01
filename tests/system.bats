@@ -171,23 +171,6 @@ setup() {
     hostnamectl() { :; }
     export -f hostnamectl
 
-    # Mock sed -i for macOS (BSD sed lacks \b and requires backup arg for -i)
-    sed() {
-        local args=()
-        for arg in "$@"; do
-            if [[ "$arg" == "-i" ]]; then
-                args+=("-i" "")
-            elif [[ "$arg" == *'\b'* ]]; then
-                # Replace \b with [[:space:]] boundary for BSD sed
-                args+=("${arg//\\b/[[:space:]]}")
-            else
-                args+=("$arg")
-            fi
-        done
-        /usr/bin/sed "${args[@]}"
-    }
-    export -f sed
-
     run system::set_hostname "newhost"
     assert_success
 
@@ -215,20 +198,6 @@ setup() {
 
     systemctl() { :; }
     export -f systemctl
-
-    # Make sed -i portable for macOS
-    sed() {
-        local args=()
-        for arg in "$@"; do
-            if [[ "$arg" == "-i" ]]; then
-                args+=("-i" "")
-            else
-                args+=("$arg")
-            fi
-        done
-        /usr/bin/sed "${args[@]}"
-    }
-    export -f sed
 
     run system::configure_journald
     assert_success
