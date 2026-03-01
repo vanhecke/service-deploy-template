@@ -27,20 +27,33 @@ setup() {
     assert_success
 }
 
-@test "ERR trap reports line number on failure" {
+@test "ERR trap reports function name and line number on failure" {
     local script="$BATS_TEST_TMPDIR/err-test.sh"
     cat >"$script" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 set -o errtrace
-trap 'printf "Error on line %d (exit %d)\n" "$LINENO" "$?" >&2' ERR
-true
-false
+trap 'printf "Error in %s on line %d (exit %d)\n" "${FUNCNAME[0]:-main}" "$LINENO" "$?" >&2' ERR
+my_func() {
+    false
+}
+my_func
 SCRIPT
     chmod +x "$script"
     run "$script"
     assert_failure
-    assert_output --partial "Error on line 6"
+    assert_output --partial "Error in my_func"
+    assert_output --partial "exit 1"
+}
+
+@test "deploy.sh ERR trap includes FUNCNAME" {
+    run grep -q 'FUNCNAME' "$PROJECT_ROOT/bin/deploy.sh"
+    assert_success
+}
+
+@test "ctl.sh ERR trap includes FUNCNAME" {
+    run grep -q 'FUNCNAME' "$PROJECT_ROOT/bin/ctl.sh"
+    assert_success
 }
 
 # --- IFS restriction tests ---

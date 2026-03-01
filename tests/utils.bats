@@ -97,6 +97,35 @@ setup() {
     rm -f "$myfile"
 }
 
+# --- utils::execute tests ---
+
+@test "utils::execute is defined" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/logging.sh'; source '$PROJECT_ROOT/lib/core/utils.sh'; declare -f utils::execute"
+    assert_success
+}
+
+@test "utils::execute runs a command" {
+    source "$PROJECT_ROOT/lib/core/logging.sh"
+    run utils::execute "touch '$BATS_TEST_TMPDIR/exec-test'" "Creating test file"
+    assert_success
+    [[ -f "$BATS_TEST_TMPDIR/exec-test" ]]
+}
+
+@test "utils::execute logs the command in dry-run mode" {
+    source "$PROJECT_ROOT/lib/core/logging.sh"
+    DRY_RUN=true run utils::execute "touch '$BATS_TEST_TMPDIR/dry-test'" "Creating test file"
+    assert_success
+    assert_output --partial "[DRY RUN]"
+    assert_output --partial "Creating test file"
+    [[ ! -f "$BATS_TEST_TMPDIR/dry-test" ]]
+}
+
+@test "utils::execute propagates command failure" {
+    source "$PROJECT_ROOT/lib/core/logging.sh"
+    run utils::execute "false" "Failing command"
+    assert_failure
+}
+
 @test "utils::cleanup_tempfiles removes created files" {
     local myfile
     utils::tempfile myfile "tmp"

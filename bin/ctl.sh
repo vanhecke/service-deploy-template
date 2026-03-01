@@ -8,7 +8,7 @@
 set -euo pipefail
 set -o errtrace
 IFS=$'\n\t'
-trap 'printf "Error on line %d (exit %d)\n" "$LINENO" "$?" >&2' ERR
+trap 'printf "Error in %s on line %d (exit %d)\n" "${FUNCNAME[0]:-main}" "$LINENO" "$?" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"

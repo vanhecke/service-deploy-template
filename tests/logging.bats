@@ -102,6 +102,39 @@ SCRIPT
     assert_output --partial "diagnostic info"
 }
 
+# --- log-to-file tests ---
+
+@test "logging::log writes to LOG_FILE when set" {
+    local logfile="$BATS_TEST_TMPDIR/test.log"
+    LOG_FILE="$logfile" run logging::info "file logging test"
+    assert_success
+    run cat "$logfile"
+    assert_output --partial "[INFO]"
+    assert_output --partial "file logging test"
+}
+
+@test "logging::log strips ANSI codes when writing to LOG_FILE" {
+    local logfile="$BATS_TEST_TMPDIR/test.log"
+    FORCE_COLOR=1 LOG_FILE="$logfile" run bash -c "
+        source '$PROJECT_ROOT/lib/core/logging.sh'
+        logging::info 'color test'
+    "
+    assert_success
+    # Log file should not contain escape sequences
+    run grep -P '\033' "$logfile"
+    assert_failure
+}
+
+@test "logging::log appends to existing LOG_FILE" {
+    local logfile="$BATS_TEST_TMPDIR/test.log"
+    printf 'existing line\n' >"$logfile"
+    LOG_FILE="$logfile" run logging::info "appended"
+    assert_success
+    run cat "$logfile"
+    assert_output --partial "existing line"
+    assert_output --partial "appended"
+}
+
 @test "logging::cron_cleanup is silent on success" {
     local script="$BATS_TEST_TMPDIR/cron-ok-test.sh"
     cat >"$script" <<'SCRIPT'

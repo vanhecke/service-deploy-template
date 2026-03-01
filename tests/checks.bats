@@ -117,3 +117,29 @@ MOCK
     run checks::run_as_root
     assert_failure
 }
+
+@test "checks::confirm is defined" {
+    run bash -c "source '$PROJECT_ROOT/lib/core/checks.sh'; declare -f checks::confirm"
+    assert_success
+}
+
+@test "checks::confirm returns 0 when FORCE is true" {
+    FORCE=true run checks::confirm "Proceed?"
+    assert_success
+}
+
+@test "checks::confirm returns 0 on yes input" {
+    run bash -c "
+        source '$PROJECT_ROOT/lib/core/checks.sh'
+        echo 'y' | checks::confirm 'Proceed?'
+    "
+    assert_success
+}
+
+@test "checks::confirm returns 1 on no input" {
+    run bash -c "
+        source '$PROJECT_ROOT/lib/core/checks.sh'
+        echo 'n' | checks::confirm 'Proceed?'
+    "
+    assert_failure
+}

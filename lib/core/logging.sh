@@ -56,6 +56,13 @@ logging::log() {
     else
         printf '%b\n' "$formatted"
     fi
+
+    # Append to log file if configured (ANSI codes stripped)
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        local plain
+        plain="$(printf '%b\n' "[${timestamp}] [${level}] ${message}")"
+        printf '%s\n' "$plain" >>"$LOG_FILE"
+    fi
 }
 
 # @description Convenience wrappers for each log level.

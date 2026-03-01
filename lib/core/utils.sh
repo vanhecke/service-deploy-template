@@ -79,6 +79,20 @@ utils::ensure_dir() {
     [[ -n "$mode" ]] && chmod "$mode" "$dir" || true
 }
 
+# @description Execute a command with dry-run awareness and logging.
+# @arg $1 string Command to execute (passed to eval)
+# @arg $2 string Description for logging
+utils::execute() {
+    local cmd="${1:?Missing command}"
+    local desc="${2:-$cmd}"
+    if [[ "${DRY_RUN:-false}" == true ]]; then
+        logging::info "[DRY RUN] ${desc}: ${cmd}"
+        return 0
+    fi
+    logging::debug "${desc}: ${cmd}"
+    eval "$cmd"
+}
+
 # @description Create a symlink idempotently.
 utils::ensure_symlink() {
     local target="$1"

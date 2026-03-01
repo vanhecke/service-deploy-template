@@ -88,6 +88,17 @@ checks::is_interactive() {
     [[ -t 0 ]]
 }
 
+# @description Prompt the user for y/n confirmation. Returns 0 on yes, 1 on no.
+#   Skips prompt and returns 0 when FORCE=true.
+checks::confirm() {
+    local prompt="${1:?Missing prompt message}"
+    [[ "${FORCE:-false}" == true ]] && return 0
+    local answer
+    printf '%s [y/N] ' "$prompt" >&2
+    read -r answer
+    [[ "$answer" =~ ^[Yy]$ ]]
+}
+
 # @description Run a command as root, using sudo if not already root.
 checks::run_as_root() {
     if [[ $# -eq 0 ]]; then
