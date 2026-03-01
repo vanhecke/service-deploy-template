@@ -15,16 +15,16 @@ set -u
 : "${stderr_lines:=}"
 
 assert_test_pass() {
-  test "$status" -eq 0
-  test "${#lines[@]}" -eq 0
+    test "$status" -eq 0
+    test "${#lines[@]}" -eq 0
 }
 
 assert_test_fail() {
-  local err_msg="${1-$(cat -)}"
-  local num_lines
-  num_lines="$(printf '%s' "$err_msg" | wc -l)"
+    local err_msg="${1-$(cat -)}"
+    local num_lines
+    num_lines="$(printf '%s' "$err_msg" | wc -l)"
 
-  test "$status" -eq 1
-  test "${#lines[@]}" -eq "$num_lines"
-  test "$output" == "$err_msg"
+    test "$status" -eq 1
+    test "${#lines[@]}" -eq "$num_lines"
+    test "$output" == "$err_msg"
 }

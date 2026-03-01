@@ -3,14 +3,14 @@
 load test_helper
 
 @test 'assert_equal() <actual> <expected>: returns 0 if <actual> equals <expected>' {
-  run assert_equal 'a' 'a'
-  assert_test_pass
+    run assert_equal 'a' 'a'
+    assert_test_pass
 }
 
 @test 'assert_equal() <actual> <expected>: returns 1 and displays details if <actual> does not equal <expected>' {
-  run assert_equal 'a' 'b'
+    run assert_equal 'a' 'b'
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- values do not equal --
 expected : b
@@ -20,9 +20,9 @@ ERR_MSG
 }
 
 @test 'assert_equal() <actual> <expected>: displays details in multi-line format if <actual> is longer than one line' {
-  run assert_equal $'a 0\na 1' 'b'
+    run assert_equal $'a 0\na 1' 'b'
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- values do not equal --
 expected (1 lines):
@@ -35,9 +35,9 @@ ERR_MSG
 }
 
 @test 'assert_equal() <actual> <expected>: displays details in multi-line format if <expected> is longer than one line' {
-  run assert_equal 'a' $'b 0\nb 1'
+    run assert_equal 'a' $'b 0\nb 1'
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- values do not equal --
 expected (2 lines):
@@ -50,9 +50,9 @@ ERR_MSG
 }
 
 @test 'assert_equal() <actual> <expected>: performs literal matching' {
-  run assert_equal 'a' '*'
+    run assert_equal 'a' '*'
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- values do not equal --
 expected : *

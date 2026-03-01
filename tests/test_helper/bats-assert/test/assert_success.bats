@@ -3,18 +3,18 @@
 load test_helper
 
 @test "assert_success(): returns 0 if \`\$status' is 0" {
-  run true
-  run assert_success
+    run true
+    run assert_success
 
-  assert_test_pass
+    assert_test_pass
 }
 
 @test "assert_success(): returns 1 and displays details if \`\$status' is not 0" {
-  run bash -c 'echo "a"
+    run bash -c 'echo "a"
                exit 1'
-  run assert_success
+    run assert_success
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- command failed --
 status : 1
@@ -24,11 +24,11 @@ ERR_MSG
 }
 
 @test "assert_success(): displays \`\$output' in multi-line format if it is longer than one line" {
-  run bash -c 'printf "a 0\na 1"
+    run bash -c 'printf "a 0\na 1"
                exit 1'
-  run assert_success
+    run assert_success
 
-  assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- command failed --
 status : 1
@@ -40,14 +40,14 @@ ERR_MSG
 }
 
 @test "assert_success(): displays \`\$stderr' if it is set" {
-  bats_require_minimum_version 1.5.0
-	run --separate-stderr \
-			bash -c 'echo "a"
+    bats_require_minimum_version 1.5.0
+    run --separate-stderr \
+        bash -c 'echo "a"
 							 echo "b" >&2
 							 exit 1'
-	run assert_success
+    run assert_success
 
-	assert_test_fail <<'ERR_MSG'
+    assert_test_fail <<'ERR_MSG'
 
 -- command failed --
 status : 1

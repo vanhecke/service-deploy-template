@@ -27,6 +27,6 @@
 # Outputs:
 #   STDERR - message
 fail() {
-  (( $# == 0 )) && batslib_err || batslib_err "$@"
-  return 1
+    (($# == 0)) && batslib_err || batslib_err "$@"
+    return 1
 }

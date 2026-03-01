@@ -10,11 +10,11 @@ lint: ## Run ShellCheck on all scripts
 
 .PHONY: format
 format: ## Format scripts with shfmt
-	shfmt -w -i 4 -ci $(SCRIPTS)
+	shfmt -w -i 4 -ci .
 
 .PHONY: format-check
 format-check: ## Check formatting without modifying
-	shfmt -d -i 4 -ci $(SCRIPTS)
+	shfmt -d -i 4 -ci .
 
 .PHONY: test
 test: ## Run bats-core tests

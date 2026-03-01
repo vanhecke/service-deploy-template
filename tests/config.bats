@@ -8,7 +8,7 @@ setup() {
 
 @test "config::load_env_file loads key=value pairs" {
     local env_file="$BATS_TEST_TMPDIR/test.env"
-    printf 'MY_VAR=hello\n' > "$env_file"
+    printf 'MY_VAR=hello\n' >"$env_file"
     unset MY_VAR
     config::load_env_file "$env_file"
     [[ "$MY_VAR" == "hello" ]]
@@ -16,7 +16,7 @@ setup() {
 
 @test "config::load_env_file skips comments" {
     local env_file="$BATS_TEST_TMPDIR/test.env"
-    printf '# this is a comment\nVALID_VAR=yes\n' > "$env_file"
+    printf '# this is a comment\nVALID_VAR=yes\n' >"$env_file"
     unset VALID_VAR
     config::load_env_file "$env_file"
     [[ "$VALID_VAR" == "yes" ]]
@@ -24,7 +24,7 @@ setup() {
 
 @test "config::load_env_file skips blank lines" {
     local env_file="$BATS_TEST_TMPDIR/test.env"
-    printf '\n\nSOME_VAR=value\n\n' > "$env_file"
+    printf '\n\nSOME_VAR=value\n\n' >"$env_file"
     unset SOME_VAR
     config::load_env_file "$env_file"
     [[ "$SOME_VAR" == "value" ]]
@@ -32,7 +32,7 @@ setup() {
 
 @test "config::load_env_file strips quotes" {
     local env_file="$BATS_TEST_TMPDIR/test.env"
-    printf 'QUOTED="hello world"\n' > "$env_file"
+    printf 'QUOTED="hello world"\n' >"$env_file"
     unset QUOTED
     config::load_env_file "$env_file"
     [[ "$QUOTED" == "hello world" ]]
@@ -41,7 +41,7 @@ setup() {
 @test "config::load_env_file does not override existing env vars" {
     export EXISTING_VAR="original"
     local env_file="$BATS_TEST_TMPDIR/test.env"
-    printf 'EXISTING_VAR=overwritten\n' > "$env_file"
+    printf 'EXISTING_VAR=overwritten\n' >"$env_file"
     config::load_env_file "$env_file"
     [[ "$EXISTING_VAR" == "original" ]]
 }

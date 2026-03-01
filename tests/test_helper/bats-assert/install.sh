@@ -7,11 +7,11 @@ PREFIX="${1%/}"
 LIBDIR="${2:-lib}"
 
 if [[ -z "$PREFIX" ]]; then
-  printf '%s\n' \
-    "usage: $0 <prefix> [base_libdir]" \
-    "  e.g. $0 /usr/local" \
-    "       $0 /usr/local lib64" >&2
-  exit 1
+    printf '%s\n' \
+        "usage: $0 <prefix> [base_libdir]" \
+        "  e.g. $0 /usr/local" \
+        "       $0 /usr/local lib64" >&2
+    exit 1
 fi
 
 BATS_LIBDIR=$PREFIX/$LIBDIR/bats/bats-assert

@@ -8,7 +8,7 @@ setup() {
 
 @test "utils::backup_file creates backup with timestamp" {
     local original="$BATS_TEST_TMPDIR/myfile.conf"
-    printf 'content' > "$original"
+    printf 'content' >"$original"
     run utils::backup_file "$original"
     assert_success
     assert_output --regexp '\.backup\.[0-9]{14}$'
@@ -22,14 +22,14 @@ setup() {
 
 @test "utils::ensure_line adds missing line" {
     local file="$BATS_TEST_TMPDIR/lines.txt"
-    printf 'existing line\n' > "$file"
+    printf 'existing line\n' >"$file"
     utils::ensure_line "$file" "new line"
     grep -qF "new line" "$file"
 }
 
 @test "utils::ensure_line is idempotent" {
     local file="$BATS_TEST_TMPDIR/lines.txt"
-    printf 'existing line\n' > "$file"
+    printf 'existing line\n' >"$file"
     utils::ensure_line "$file" "new line"
     utils::ensure_line "$file" "new line"
     local count
@@ -53,7 +53,7 @@ setup() {
 @test "utils::ensure_symlink creates symlink" {
     local target="$BATS_TEST_TMPDIR/target_file"
     local link="$BATS_TEST_TMPDIR/my_link"
-    printf 'data' > "$target"
+    printf 'data' >"$target"
     utils::ensure_symlink "$target" "$link"
     [[ -L "$link" ]]
     [[ "$(readlink "$link")" == "$target" ]]
@@ -62,7 +62,7 @@ setup() {
 @test "utils::ensure_symlink is idempotent" {
     local target="$BATS_TEST_TMPDIR/target_file"
     local link="$BATS_TEST_TMPDIR/my_link"
-    printf 'data' > "$target"
+    printf 'data' >"$target"
     utils::ensure_symlink "$target" "$link"
     utils::ensure_symlink "$target" "$link"
     [[ -L "$link" ]]
@@ -72,7 +72,7 @@ setup() {
     local template="$BATS_TEST_TMPDIR/template.conf"
     local output="$BATS_TEST_TMPDIR/output.conf"
     export MY_SETTING="hello"
-    printf 'value=${MY_SETTING}\n' > "$template"
+    printf 'value=${MY_SETTING}\n' >"$template"
     utils::render_template "$template" "$output"
     grep -qF "value=hello" "$output"
 }

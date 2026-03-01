@@ -8,8 +8,8 @@ load test_helper
 
 # Correctness
 @test "refute_regex() <value> <pattern>: fails if a <value> substring matches extended regular expression <pattern>" {
-  run refute_regex 'abc' '^[a-z]b'
-  assert_test_fail <<'ERR_MSG'
+    run refute_regex 'abc' '^[a-z]b'
+    assert_test_fail <<'ERR_MSG'
 
 -- value matches regular expression --
 value    : abc
@@ -21,25 +21,25 @@ ERR_MSG
 }
 
 @test "refute_regex() <value> <pattern>: succeeds if no <value> substring matches extended regular expression <pattern>" {
-  run refute_regex 'bcd' '^[a-z]b[c-z]+'
-  assert_test_pass
+    run refute_regex 'bcd' '^[a-z]b[c-z]+'
+    assert_test_pass
 }
 
 @test "refute_regex() <value> <pattern>: provides results in BASH_REMATCH on failure" {
-  unset -v BASH_REMATCH
+    unset -v BASH_REMATCH
 
-  refute_regex 'abcd' 'b.d' \
-  || {
-      declare -p BASH_REMATCH && \
-      [ "${BASH_REMATCH[0]}" = 'bcd' ]
-  }
+    refute_regex 'abcd' 'b.d' ||
+        {
+            declare -p BASH_REMATCH &&
+                [ "${BASH_REMATCH[0]}" = 'bcd' ]
+        }
 }
 
 @test "refute_regex() <value> <pattern>: matches case-insensitively when 'nocasematch' is set" {
-  shopt -s nocasematch
+    shopt -s nocasematch
 
-  run refute_regex 'aBc' 'ABC'
-  assert_test_fail <<'ERR_MSG'
+    run refute_regex 'aBc' 'ABC'
+    assert_test_fail <<'ERR_MSG'
 
 -- value matches regular expression --
 value    : aBc
@@ -51,8 +51,8 @@ ERR_MSG
 }
 
 @test "refute_regex() <value> <pattern>: outputs multi-line <value> nicely when it fails" {
-  run refute_regex $'abc\n123' '^[a-z]b[c-z]+'
-  assert_test_fail <<'ERR_MSG'
+    run refute_regex $'abc\n123' '^[a-z]b[c-z]+'
+    assert_test_fail <<'ERR_MSG'
 
 -- value matches regular expression --
 value (2 lines):
@@ -67,9 +67,9 @@ case (1 lines):
 --
 ERR_MSG
 
-  shopt -s nocasematch
-  run refute_regex $'aBc\n123' '^[a-z]b[c-z]+'
-  assert_test_fail <<'ERR_MSG'
+    shopt -s nocasematch
+    run refute_regex $'aBc\n123' '^[a-z]b[c-z]+'
+    assert_test_fail <<'ERR_MSG'
 
 -- value matches regular expression --
 value (2 lines):
@@ -87,22 +87,22 @@ ERR_MSG
 
 # Error handling
 @test "refute_regex() <value> <pattern>: returns 1 and displays an error message if <pattern> is not a valid extended regular expression" {
-  run refute_regex value '[.*'
+    run refute_regex value '[.*'
 
-  if (( BASH_VERSINFO[0] > 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] >=3) )); then
-    [[ "$output" =~ "invalid regular expression "([^$'\n']+) ]]
-    assert_test_fail <<ERR_MSG
+    if ((BASH_VERSINFO[0] > 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] >= 3))); then
+        [[ "$output" =~ "invalid regular expression "([^$'\n']+) ]]
+        assert_test_fail <<ERR_MSG
 
 -- ERROR: refute_regex --
 invalid regular expression ${BASH_REMATCH[1]}
 --
 ERR_MSG
-  else
-    assert_test_fail <<'ERR_MSG'
+    else
+        assert_test_fail <<'ERR_MSG'
 
 -- ERROR: refute_regex --
 Invalid extended regular expression: `[.*'
 --
 ERR_MSG
-  fi
+    fi
 }

@@ -8,7 +8,7 @@ setup() {
 
 @test "checks::detect_os identifies Ubuntu" {
     export OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release"
-    cat > "$OS_RELEASE_FILE" <<'EOF'
+    cat >"$OS_RELEASE_FILE" <<'EOF'
 ID=ubuntu
 VERSION_ID="24.04"
 VERSION_CODENAME=noble
@@ -21,7 +21,7 @@ EOF
 
 @test "checks::detect_os identifies Debian" {
     export OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release"
-    cat > "$OS_RELEASE_FILE" <<'EOF'
+    cat >"$OS_RELEASE_FILE" <<'EOF'
 ID=debian
 VERSION_ID="12"
 VERSION_CODENAME=bookworm
@@ -33,7 +33,7 @@ EOF
 
 @test "checks::detect_os rejects unsupported OS" {
     export OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release"
-    printf 'ID=fedora\nVERSION_ID="39"\n' > "$OS_RELEASE_FILE"
+    printf 'ID=fedora\nVERSION_ID="39"\n' >"$OS_RELEASE_FILE"
     run checks::detect_os
     assert_failure
     assert_output --partial "Unsupported"
