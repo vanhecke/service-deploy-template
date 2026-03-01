@@ -34,13 +34,24 @@ users::lock_password() {
 users::ensure_sudoers() {
     local username="${1:?Missing username}"
     local app_name="${2:?Missing app_name}"
+
+    # Validate inputs to prevent path traversal and sudoers injection
+    if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+        logging::error "Invalid username for sudoers: ${username}"
+        return 1
+    fi
+    if [[ ! "$app_name" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+        logging::error "Invalid app_name for sudoers: ${app_name}"
+        return 1
+    fi
+
     local sudoers_file="/etc/sudoers.d/${app_name}"
     local sudoers_content
     sudoers_content="$(
         cat <<EOF
 # Managed by ${app_name} deploy script — do not edit manually
-${username} ALL=(ALL) NOPASSWD: /usr/bin/apt-get update *
-${username} ALL=(ALL) NOPASSWD: /usr/bin/apt-get upgrade *
+${username} ALL=(ALL) NOPASSWD: /usr/bin/apt-get update
+${username} ALL=(ALL) NOPASSWD: /usr/bin/apt-get upgrade -y -qq
 ${username} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ${app_name}
 ${username} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start ${app_name}
 ${username} ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop ${app_name}
@@ -55,12 +66,17 @@ EOF
         logging::info "[DRY RUN] Would install sudoers rules to ${sudoers_file}"
         return 0
     fi
-    printf '%s\n' "$sudoers_content" >"$sudoers_file"
-    chmod 0440 "$sudoers_file"
-    if ! visudo -cf "$sudoers_file" &>/dev/null; then
-        rm -f "$sudoers_file"
-        logging::error "Invalid sudoers syntax — removed ${sudoers_file}"
+
+    # Write to temp file, validate, then move into place
+    local tmpfile
+    tmpfile="$(mktemp /etc/sudoers.d/.tmp.XXXXXX)"
+    printf '%s\n' "$sudoers_content" >"$tmpfile"
+    chmod 0440 "$tmpfile"
+    if ! visudo -cf "$tmpfile" &>/dev/null; then
+        rm -f "$tmpfile"
+        logging::error "Invalid sudoers syntax — discarded"
         return 1
     fi
+    mv "$tmpfile" "$sudoers_file"
     logging::info "Installed sudoers rules to ${sudoers_file}"
 }

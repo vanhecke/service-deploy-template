@@ -106,14 +106,14 @@ setup() {
 
 @test "utils::execute runs a command" {
     source "$PROJECT_ROOT/lib/core/logging.sh"
-    run utils::execute "touch '$BATS_TEST_TMPDIR/exec-test'" "Creating test file"
+    run utils::execute "Creating test file" touch "$BATS_TEST_TMPDIR/exec-test"
     assert_success
     [[ -f "$BATS_TEST_TMPDIR/exec-test" ]]
 }
 
 @test "utils::execute logs the command in dry-run mode" {
     source "$PROJECT_ROOT/lib/core/logging.sh"
-    DRY_RUN=true run utils::execute "touch '$BATS_TEST_TMPDIR/dry-test'" "Creating test file"
+    DRY_RUN=true run utils::execute "Creating test file" touch "$BATS_TEST_TMPDIR/dry-test"
     assert_success
     assert_output --partial "[DRY RUN]"
     assert_output --partial "Creating test file"
@@ -122,7 +122,7 @@ setup() {
 
 @test "utils::execute propagates command failure" {
     source "$PROJECT_ROOT/lib/core/logging.sh"
-    run utils::execute "false" "Failing command"
+    run utils::execute "Failing command" false
     assert_failure
 }
 

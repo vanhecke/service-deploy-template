@@ -27,6 +27,10 @@ config::load_env_file() {
         value="${value%\"}"
         value="${value#\'}"
         value="${value%\'}"
+        # Validate key is a safe shell identifier
+        if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            continue
+        fi
         # Only set if not already in environment
         if [[ -z "${!key:-}" ]]; then
             export "$key=$value"

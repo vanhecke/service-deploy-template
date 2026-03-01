@@ -20,7 +20,7 @@ network::is_port_open() {
     local host="$1"
     local port="$2"
     local timeout="${3:-3}"
-    timeout "$timeout" bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null
+    timeout "$timeout" bash -c 'echo >/dev/tcp/"$1"/"$2"' _ "$host" "$port" 2>/dev/null
 }
 
 # @description Wait for a port to become available.

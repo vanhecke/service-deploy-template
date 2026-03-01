@@ -88,7 +88,10 @@ EOF
 deploy::install_project() {
     local app_user="$1"
     local home_dir
-    home_dir="$(eval echo "~${app_user}")"
+    home_dir="$(utils::home_dir "$app_user")" || {
+        logging::error "User '${app_user}' not found in passwd database"
+        return 1
+    }
     local deploy_dir="${home_dir}/deploy"
 
     if [[ "${DRY_RUN}" == true ]]; then
@@ -106,7 +109,10 @@ deploy::install_ctl() {
     local app_user="$1"
     local app_name="$2"
     local home_dir
-    home_dir="$(eval echo "~${app_user}")"
+    home_dir="$(utils::home_dir "$app_user")" || {
+        logging::error "User '${app_user}' not found in passwd database"
+        return 1
+    }
     local bin_dir="${home_dir}/bin"
     local ctl_name="${app_name}ctl"
     local ctl_path="${bin_dir}/${ctl_name}"

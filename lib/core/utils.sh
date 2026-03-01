@@ -12,18 +12,22 @@ _TEMP_FILES=()
 utils::tempfile() {
     local -n _tf_ref="$1"
     local ext="${2:-tmp}"
-    local base
-    base=$(mktemp "/tmp/${APP_NAME:-script}.XXXXXX")
-    mv "$base" "${base}.${ext}"
-    _tf_ref="${base}.${ext}"
-    _TEMP_FILES+=("$_tf_ref")
+    local tmpdir
+    tmpdir=$(mktemp -d "/tmp/${APP_NAME:-script}.XXXXXX")
+    _tf_ref="${tmpdir}/temp.${ext}"
+    touch "$_tf_ref"
+    _TEMP_FILES+=("$tmpdir")
 }
 
-# @description Remove all temporary files created by utils::tempfile.
+# @description Remove all temporary files and directories created by utils::tempfile.
 utils::cleanup_tempfiles() {
     local f
     for f in "${_TEMP_FILES[@]}"; do
-        [[ -f "$f" ]] && rm -f "$f"
+        if [[ -d "$f" ]]; then
+            rm -rf "$f"
+        elif [[ -f "$f" ]]; then
+            rm -f "$f"
+        fi
     done
     _TEMP_FILES=()
 }
@@ -80,17 +84,35 @@ utils::ensure_dir() {
 }
 
 # @description Execute a command with dry-run awareness and logging.
-# @arg $1 string Command to execute (passed to eval)
-# @arg $2 string Description for logging
+# @arg $1 string Description for logging
+# @arg $@ command Command and arguments to execute
 utils::execute() {
-    local cmd="${1:?Missing command}"
-    local desc="${2:-$cmd}"
+    local desc="${1:?Missing description}"
+    shift
     if [[ "${DRY_RUN:-false}" == true ]]; then
-        logging::info "[DRY RUN] ${desc}: ${cmd}"
+        logging::info "[DRY RUN] ${desc}: $*"
         return 0
     fi
-    logging::debug "${desc}: ${cmd}"
-    eval "$cmd"
+    logging::debug "${desc}: $*"
+    "$@"
+}
+
+# @description Get the home directory for a user from the passwd database.
+# Portable across Linux (getent) and macOS (dscl).
+utils::home_dir() {
+    local username="${1:?Missing username}"
+    local home_dir
+    if command -v getent &>/dev/null; then
+        home_dir="$(getent passwd "$username" | cut -d: -f6)"
+    elif command -v dscl &>/dev/null; then
+        home_dir="$(dscl . -read "/Users/${username}" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+    else
+        home_dir="$(awk -F: -v u="$username" '$1==u {print $6}' /etc/passwd)"
+    fi
+    if [[ -z "$home_dir" ]]; then
+        return 1
+    fi
+    printf '%s\n' "$home_dir"
 }
 
 # @description Create a symlink idempotently.

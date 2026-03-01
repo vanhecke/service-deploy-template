@@ -7,15 +7,19 @@ readonly _SSH_SH_LOADED=1
 # @description Ensure ~/.ssh directory and authorized_keys exist with correct permissions.
 ssh::ensure_authorized_keys() {
     local username="${1:?Missing username}"
-    local home_dir
-    home_dir="$(eval echo "~${username}")"
-    local ssh_dir="${home_dir}/.ssh"
-    local auth_keys="${ssh_dir}/authorized_keys"
 
     if [[ "${DRY_RUN:-false}" == true ]]; then
-        logging::info "[DRY RUN] Would ensure ${auth_keys}"
+        logging::info "[DRY RUN] Would ensure authorized_keys for ${username}"
         return 0
     fi
+
+    local home_dir
+    home_dir="$(utils::home_dir "$username")" || {
+        logging::error "User '${username}' not found in passwd database"
+        return 1
+    }
+    local ssh_dir="${home_dir}/.ssh"
+    local auth_keys="${ssh_dir}/authorized_keys"
     utils::ensure_dir "$ssh_dir" "${username}:${username}" "700"
     [[ -f "$auth_keys" ]] || touch "$auth_keys"
     chown "${username}:${username}" "$auth_keys"
@@ -27,15 +31,19 @@ ssh::ensure_authorized_keys() {
 ssh::import_github_keys() {
     local github_user="${1:?Missing GitHub username}"
     local username="${2:?Missing system username}"
-    local home_dir
-    home_dir="$(eval echo "~${username}")"
-    local auth_keys="${home_dir}/.ssh/authorized_keys"
     local url="https://github.com/${github_user}.keys"
 
     if [[ "${DRY_RUN:-false}" == true ]]; then
         logging::info "[DRY RUN] Would import keys from ${url} for ${username}"
         return 0
     fi
+
+    local home_dir
+    home_dir="$(utils::home_dir "$username")" || {
+        logging::error "User '${username}' not found in passwd database"
+        return 1
+    }
+    local auth_keys="${home_dir}/.ssh/authorized_keys"
 
     local keys
     keys="$(curl -fsSL --connect-timeout 10 "$url" 2>/dev/null)" || {
