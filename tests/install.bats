@@ -24,7 +24,10 @@ setup() {
 
 @test "install::download dry run does not call curl" {
     export DRY_RUN=true
-    curl() { echo "curl should not be called"; return 1; }
+    curl() {
+        echo "curl should not be called"
+        return 1
+    }
     export -f curl
     run install::download "http://example.com/file" "$BATS_TEST_TMPDIR/out"
     assert_success
@@ -55,7 +58,10 @@ setup() {
 }
 
 @test "install::download creates destination directory" {
-    curl() { touch "$BATS_TEST_TMPDIR/nested/dir/file"; return 0; }
+    curl() {
+        touch "$BATS_TEST_TMPDIR/nested/dir/file"
+        return 0
+    }
     export -f curl
     run install::download "http://example.com/f" "$BATS_TEST_TMPDIR/nested/dir/file"
     assert_success
@@ -218,7 +224,10 @@ RESPONSE
 }
 
 @test "install::github_latest_release fails on API error" {
-    curl() { echo "Not Found"; return 1; }
+    curl() {
+        echo "Not Found"
+        return 1
+    }
     export -f curl
     run install::github_latest_release "owner/nonexistent"
     assert_failure
@@ -292,7 +301,10 @@ RESPONSE
 }
 
 @test "install::github_download_release fails on API error" {
-    curl() { echo "API error"; return 1; }
+    curl() {
+        echo "API error"
+        return 1
+    }
     export -f curl
     run install::github_download_release "owner/repo" "*.tar.gz" "$BATS_TEST_TMPDIR/out"
     assert_failure
@@ -310,7 +322,10 @@ RESPONSE
 
 @test "install::git_clone_or_pull dry run does not call git" {
     export DRY_RUN=true
-    git() { echo "git should not be called"; return 1; }
+    git() {
+        echo "git should not be called"
+        return 1
+    }
     export -f git
     run install::git_clone_or_pull "https://github.com/owner/repo.git" "$BATS_TEST_TMPDIR/repo"
     assert_success

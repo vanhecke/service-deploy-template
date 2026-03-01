@@ -20,6 +20,7 @@ network::is_port_open() {
     local host="$1"
     local port="$2"
     local timeout="${3:-3}"
+    # shellcheck disable=SC2016 # $1/$2 are positional args to inner bash, not this shell
     timeout "$timeout" bash -c 'echo >/dev/tcp/"$1"/"$2"' _ "$host" "$port" 2>/dev/null
 }
 
