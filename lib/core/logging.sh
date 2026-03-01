@@ -10,6 +10,7 @@ readonly _LOGGING_SH_LOADED=1
 declare -gA _LOG_LEVELS=([DEBUG]=0 [INFO]=1 [WARN]=2 [ERROR]=3 [FATAL]=4)
 
 # @description Initialize ANSI color variables based on NO_COLOR, FORCE_COLOR, and terminal detection.
+# shellcheck disable=SC2034
 logging::setup_colors() {
     if [[ -n "${NO_COLOR:-}" ]]; then
         RED='' GREEN='' YELLOW='' CYAN='' BOLD_RED='' NC='' BOLD=''
@@ -32,7 +33,7 @@ logging::log() {
     local current_num="${_LOG_LEVELS[$current_level]:-1}"
 
     # Filter by log level
-    (( level_num < current_num )) && return 0
+    ((level_num < current_num)) && return 0
 
     local timestamp
     timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -40,8 +41,8 @@ logging::log() {
     local color=""
     case "$level" in
         DEBUG) color="${CYAN:-}" ;;
-        INFO)  color="${GREEN:-}" ;;
-        WARN)  color="${YELLOW:-}" ;;
+        INFO) color="${GREEN:-}" ;;
+        WARN) color="${YELLOW:-}" ;;
         ERROR) color="${RED:-}" ;;
         FATAL) color="${BOLD_RED:-}" ;;
     esac
@@ -50,7 +51,7 @@ logging::log() {
     formatted="${color}[${timestamp}] [${level}]${NC:-} ${message}"
 
     # WARN/ERROR/FATAL go to stderr; DEBUG/INFO go to stdout
-    if (( level_num >= 2 )); then
+    if ((level_num >= 2)); then
         printf '%b\n' "$formatted" >&2
     else
         printf '%b\n' "$formatted"
@@ -59,10 +60,13 @@ logging::log() {
 
 # @description Convenience wrappers for each log level.
 logging::debug() { logging::log DEBUG "$@"; }
-logging::info()  { logging::log INFO  "$@"; }
-logging::warn()  { logging::log WARN  "$@"; }
+logging::info() { logging::log INFO "$@"; }
+logging::warn() { logging::log WARN "$@"; }
 logging::error() { logging::log ERROR "$@"; }
-logging::fatal() { logging::log FATAL "$@"; exit 1; }
+logging::fatal() {
+    logging::log FATAL "$@"
+    exit 1
+}
 
 # Initialize colors on source
 logging::setup_colors

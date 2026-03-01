@@ -14,7 +14,7 @@ config::load_env_file() {
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip comments and blank lines
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// }" ]] && continue
+        [[ -z "${line// /}" ]] && continue
         local key="${line%%=*}"
         local value="${line#*=}"
         # Skip lines without =
@@ -23,14 +23,15 @@ config::load_env_file() {
         key="${key#"${key%%[![:space:]]*}"}"
         key="${key%"${key##*[![:space:]]}"}"
         # Strip surrounding quotes from value
-        value="${value#\"}" ; value="${value%\"}"
-        value="${value#\'}" ; value="${value%\'}"
+        value="${value#\"}"
+        value="${value%\"}"
+        value="${value#\'}"
+        value="${value%\'}"
         # Only set if not already in environment
         if [[ -z "${!key:-}" ]]; then
-            printf -v "$key" '%s' "$value"
-            export "$key"
+            export "$key=$value"
         fi
-    done < "$env_file"
+    done <"$env_file"
 }
 
 # @description Load configuration with layered strategy.
@@ -46,7 +47,7 @@ config::require_vars() {
     for var in "$@"; do
         [[ -z "${!var:-}" ]] && missing+=("$var")
     done
-    if (( ${#missing[@]} > 0 )); then
+    if ((${#missing[@]} > 0)); then
         printf 'Missing required variables: %s\n' "${missing[*]}" >&2
         return 1
     fi
@@ -61,5 +62,5 @@ config::is_true() {
 # @description Validate a port number (1-65535).
 config::is_valid_port() {
     local port="$1"
-    [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 ))
+    [[ "$port" =~ ^[0-9]+$ ]] && ((port >= 1 && port <= 65535))
 }

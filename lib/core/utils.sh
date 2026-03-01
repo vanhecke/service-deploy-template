@@ -8,7 +8,8 @@ readonly _UTILS_SH_LOADED=1
 utils::backup_file() {
     local file="$1"
     [[ -f "$file" ]] || return 0
-    local backup="${file}.backup.$(date '+%Y%m%d%H%M%S')"
+    local backup
+    backup="${file}.backup.$(date '+%Y%m%d%H%M%S')"
     cp -a "$file" "$backup"
     printf '%s\n' "$backup"
 }
@@ -16,7 +17,7 @@ utils::backup_file() {
 # @description Acquire an exclusive lock file using flock.
 utils::acquire_lock() {
     local lock_file="$1"
-    LOCK_FILE="$lock_file"
+    export LOCK_FILE="$lock_file"
     exec 200>"$lock_file"
     if ! flock -n 200; then
         printf 'Cannot acquire lock: %s\n' "$lock_file" >&2
@@ -32,7 +33,7 @@ utils::render_template() {
         printf 'Template not found: %s\n' "$template" >&2
         return 1
     fi
-    envsubst < "$template" > "$output"
+    envsubst <"$template" >"$output"
 }
 
 # @description Idempotently ensure a line exists in a file.
@@ -41,7 +42,7 @@ utils::ensure_line() {
     local line="$2"
     local marker="${3:-$line}"
     [[ -f "$file" ]] || touch "$file"
-    grep -qF "$marker" "$file" 2>/dev/null || printf '%s\n' "$line" >> "$file"
+    grep -qF "$marker" "$file" 2>/dev/null || printf '%s\n' "$line" >>"$file"
 }
 
 # @description Create a directory idempotently with optional ownership.
@@ -50,8 +51,8 @@ utils::ensure_dir() {
     local owner="${2:-}"
     local mode="${3:-}"
     mkdir -p "$dir"
-    [[ -n "$owner" ]] && chown "$owner" "$dir"
-    [[ -n "$mode" ]] && chmod "$mode" "$dir"
+    [[ -n "$owner" ]] && chown "$owner" "$dir" || true
+    [[ -n "$mode" ]] && chmod "$mode" "$dir" || true
 }
 
 # @description Create a symlink idempotently.

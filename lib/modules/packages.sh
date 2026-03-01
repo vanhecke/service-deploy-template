@@ -14,7 +14,7 @@ packages::update_cache() {
     if [[ -f "$stamp" ]]; then
         local last
         last="$(stat -c %Y "$stamp" 2>/dev/null || stat -f %m "$stamp" 2>/dev/null)"
-        if (( now - last < _APT_CACHE_MAX_AGE )); then
+        if ((now - last < _APT_CACHE_MAX_AGE)); then
             return 0
         fi
     fi
@@ -29,7 +29,7 @@ packages::install() {
             to_install+=("$pkg")
         fi
     done
-    if (( ${#to_install[@]} > 0 )); then
+    if ((${#to_install[@]} > 0)); then
         packages::update_cache
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "${to_install[@]}"
     fi
@@ -48,7 +48,7 @@ packages::remove() {
             to_remove+=("$pkg")
         fi
     done
-    if (( ${#to_remove[@]} > 0 )); then
+    if ((${#to_remove[@]} > 0)); then
         DEBIAN_FRONTEND=noninteractive apt-get remove -y -qq "${to_remove[@]}"
     fi
 }

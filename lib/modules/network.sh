@@ -9,9 +9,9 @@ network::is_valid_ipv4() {
     local ip="$1"
     [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
     local IFS='.'
-    read -ra octets <<< "$ip"
+    read -ra octets <<<"$ip"
     for octet in "${octets[@]}"; do
-        (( octet <= 255 )) || return 1
+        ((octet <= 255)) || return 1
     done
 }
 
@@ -29,10 +29,10 @@ network::wait_for_port() {
     local port="$2"
     local max_wait="${3:-30}"
     local elapsed=0
-    while (( elapsed < max_wait )); do
+    while ((elapsed < max_wait)); do
         network::is_port_open "$host" "$port" 1 && return 0
         sleep 1
-        (( elapsed++ ))
+        ((elapsed++))
     done
     return 1
 }
